@@ -1,64 +1,90 @@
 # PointCloudProcessing-CSF
 
-PointCloudProcessing-CSF is a Python-based pipeline for processing UAV-acquired point cloud data. It leverages the Cloth Simulation Filter (CSF) for ground (soil) segmentation, and then applies automated noise removal, clustering, and canopy segmentation into rows. The pipeline also quantifies key metrics for each row, including canopy volume ratio, canopy area ratio, and plant height.
+English | [中文](README.zh-CN.md)
 
-## Features
+[![CI](https://github.com/smiler488/PointCloudProcessing-CSF/actions/workflows/test.yml/badge.svg)](https://github.com/smiler488/PointCloudProcessing-CSF/actions/workflows/test.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) ![Python 3.9–3.12](https://img.shields.io/badge/Python_3.9%E2%80%933.12-informational)
+Batch extraction of row-level canopy traits from UAV point clouds of row-crop plots. Ground points are removed with the Cloth Simulation Filter (CSF), the plot is levelled, the canopy is cleaned and split into rows, and height, volume and area traits are written to one CSV for all plots.
 
-- **Ground Segmentation with CSF:**  
-  Uses the Cloth Simulation Filter to separate ground (soil) points from canopy points.
-
-- **Point Cloud Alignment:**  
-  Computes the ground plane from the segmented soil points and rotates/translates the point cloud so that the ground is leveled (parallel to the XY plane).
-
-- **Noise and Small Cluster Removal:**  
-  Applies statistical outlier removal and DBSCAN clustering to remove isolated noise and small clusters (e.g., remaining signboard points).
-
-- **Row Segmentation:**  
-  Projects the cleaned canopy points onto the XY plane and uses KMeans clustering to segment the canopy into three rows based on the planting direction.
-
-- **Quantitative Metrics:**  
-  For each row, the following metrics are computed:
-  - **Canopy Volume Ratio:** The ratio of the convex hull volume of the row's canopy points to the volume of its minimal cube (derived from the axis-aligned bounding box).
-  - **Canopy Area Ratio:** The ratio of the row's projected canopy area to one-third of the projected area of the original canopy candidate cloud.
-  - **Plant Height:** The difference between the maximum and minimum heights of the row's canopy points.
+This is the hands-off sibling of [CanopyPC](https://github.com/smiler488/CanopyPC). Both share the same processing code. CanopyPC is for working through one plot with viewers and manual clean-up. This repository is for running a whole trial overnight without anything waiting for a click.
 
 ## Installation
 
-### Prerequisites
-
-- Python 3.6 or higher
-
-### Dependencies
-
-Install the required packages using pip:
+Python 3.9 to 3.12.
 
 ```bash
+git clone https://github.com/smiler488/PointCloudProcessing-CSF.git
+cd PointCloudProcessing-CSF
 pip install -r requirements.txt
 ```
 
-Usage
-	1.	Place your point cloud file (in PLY format) in the repository directory.
-	2.	Modify the file_path variable in the main script (process_point_cloud.py) to point to your PLY file.
-	3.	Optionally, adjust parameters (e.g., CSF settings, DBSCAN eps, KMeans planting direction) as needed.
-	4.	Run the script:
- 
+The `CSF` module is installed from the `cloth-simulation-filter` package. The package called `CSF` on PyPI is unrelated.
+
+## Usage
+
 ```bash
-python process_point_cloud.py
+# every .ply in a folder, three rows per plot, planting direction along (1, 2.3)
+python process_point_cloud.py plots/ --rows 3 --direction 1 2.3 -o row_traits.csv
+
+# a few files, with Open3D windows to check each step
+python process_point_cloud.py site_02.ply site_09.ply --show
 ```
 
-During execution, several Open3D visualization windows will display intermediate results (e.g., raw point cloud, segmented soil and canopy, aligned point cloud, row segmentation with convex hulls, etc.). The final output includes quantitative metrics for each canopy row.
+| Option | Default | Notes |
+|---|---|---|
+| `--rows` | 3 | rows per plot |
+| `--direction DX DY` | estimated | planting direction in the XY plane; estimated from the row/gap pattern if omitted |
+| `--cloth-resolution` | 0.1 | CSF grid size in cloud units. Increase on rough or sloping ground |
+| `--show` | off | open viewers for each step |
+| `--manual` | off | enable the manual point-removal window |
+| `-o` | `row_traits.csv` | output table |
 
-File Structure
+If one plot fails (for example, too few ground points), the error is printed and the run moves on to the next file.
 
-•	process_point_cloud.py: Main Python script containing the complete processing pipeline.
- 
-•	README.md: This project description file.
- 
-•	requirements.txt: A list of the required Python packages.
+## Output
 
-Notes
+One line per row and plot:
 
-•	Parameter Tuning:The pipeline parameters (CSF parameters, DBSCAN eps and min_cluster_size, KMeans settings, etc.) might need tuning depending on your specific dataset and the quality of the point cloud.
+`plot, row_id, num_points, height_max, height_min, height_mean, plant_height, convex_hull_volume, minimal_cube_volume, volume_ratio, row_projected_area, canopy_area_ratio, obb_extent_x, obb_extent_y, obb_extent_z`
 
-•	Automation vs. Manual Correction:
-This version removes any manual deletion (point selection) steps. All filtering and segmentation are performed automatically.
+- Heights are above the fitted ground plane (z = 0 at the lowest ground point).
+- `convex_hull_volume` is computed after closing the row base at its lowest point.
+- `volume_ratio` = hull volume / cube on the longest oriented-bounding-box edge.
+- `row_projected_area` is the area of the row's 2-D convex hull in the XY plane.
+- `canopy_area_ratio` = row projected area × number of rows / plot projected area.
+
+## Parameter notes
+
+The defaults come from my wheat and maize plots reconstructed at roughly 1 cm point spacing:
+
+- outlier removal: 20 neighbours, 2.0 standard deviations;
+- small clusters: DBSCAN `eps = 0.05`, clusters under 100 points dropped;
+- plot labels: DBSCAN `eps = 0.1`, clusters with hull surface area under 0.2 dropped.
+
+Sparser clouds need larger `eps` values. These are function arguments in `process_point_cloud.py`.
+
+## Changes in this revision
+
+- Projected areas were roughly doubled (surface area of a flattened 3-D hull). They now use the 2-D convex hull.
+- Clouds could end up upside down when the fitted ground normal pointed down. Fixed.
+- The convex-hull volume now closes the row base, as in CanopyPC.
+- Batch input, CSV output and a command line replace the hard-coded file path.
+- The README described the run as fully automatic while the code still opened a manual window. Manual clean-up is now opt-in.
+- Added the missing `requirements.txt`.
+- The planting direction is estimated from the row/gap pattern instead of PCA, which cut across rows on near-square plots.
+
+## Citation
+
+```bibtex
+@software{deng_pcp_csf,
+  author = {Deng, Liangchao},
+  title  = {PointCloudProcessing-CSF: batch canopy traits from UAV point clouds},
+  year   = {2025},
+  url    = {https://github.com/smiler488/PointCloudProcessing-CSF}
+}
+```
+
+CSF: Zhang, W. et al. (2016). An easy-to-use airborne LiDAR data filtering method based on cloth simulation. *Remote Sensing*, 8(6), 501.
+
+## License
+
+MIT, see [LICENSE](LICENSE). Liangchao Deng (邓良超).

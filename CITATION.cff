@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use this software in your work, please cite it as below."
+title: "PointCloudProcessing-CSF: batch canopy traits from UAV point clouds"
+type: software
+authors:
+  - family-names: Deng
+    given-names: Liangchao
+repository-code: "https://github.com/smiler488/PointCloudProcessing-CSF"
+license: MIT
+date-released: "2025-03-01"
+keywords:
+  - plant phenotyping
+  - point cloud
+  - UAV
+  - canopy structure
+  - cloth simulation filter

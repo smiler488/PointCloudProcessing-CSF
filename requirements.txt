@@ -1,0 +1,6 @@
+numpy>=1.21
+scipy>=1.8
+scikit-learn>=1.1
+matplotlib>=3.6
+open3d>=0.17
+cloth-simulation-filter>=1.1.5
