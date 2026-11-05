@@ -227,12 +227,40 @@ def manual_remove_points(pcd):
 # Row segmentation and traits
 # ---------------------------------------------------------------------------
 
+def estimate_row_direction(xy, bin_size=0.02, coarse_step=1.0, fine_step=0.1):
+    """Estimate the planting direction (unit vector in the XY plane).
+
+    Points are projected onto the axis perpendicular to each candidate
+    direction and binned. When the candidate is parallel to the rows, the
+    histogram shows sharp peaks (rows) and empty bins (inter-row gaps), so
+    the variance of the bin counts is largest. A coarse 1 degree scan is
+    refined to 0.1 degree. Unlike PCA, this does not depend on the plot
+    shape, which matters for square plots or plots with few, long rows.
+    """
+    xy = np.asarray(xy, dtype=float)
+    xy = xy - xy.mean(axis=0)
+
+    def score(theta_deg):
+        t = np.deg2rad(theta_deg)
+        proj = xy @ np.array([-np.sin(t), np.cos(t)])
+        bins = np.arange(proj.min(), proj.max() + bin_size, bin_size)
+        counts, _ = np.histogram(proj, bins=bins)
+        return counts.var()
+
+    coarse = np.arange(0.0, 180.0, coarse_step)
+    best = coarse[np.argmax([score(a) for a in coarse])]
+    fine = np.arange(best - coarse_step, best + coarse_step + 1e-9, fine_step)
+    best = fine[np.argmax([score(a) for a in fine])]
+    t = np.deg2rad(best)
+    return np.array([np.cos(t), np.sin(t)])
+
+
 def segment_major_rows(plot_cloud, n_rows=3, planting_direction=None):
     """Split a canopy cloud into ``n_rows`` rows.
 
     Points are projected onto the axis perpendicular to the planting
     direction and clustered with 1-D K-means. If ``planting_direction`` is
-    None, the first principal axis of the XY coordinates is used.
+    None it is estimated with :func:`estimate_row_direction`.
 
     Returns
     -------
@@ -245,8 +273,8 @@ def segment_major_rows(plot_cloud, n_rows=3, planting_direction=None):
     xy = points[:, :2]
 
     if planting_direction is None:
-        _, _, vt = np.linalg.svd(xy - xy.mean(axis=0), full_matrices=False)
-        row_direction = vt[0]
+        row_direction = estimate_row_direction(xy)
+        print(f"Estimated planting direction: ({row_direction[0]:.3f}, {row_direction[1]:.3f})")
     else:
         row_direction = np.asarray(planting_direction, dtype=float)
         row_direction = row_direction / np.linalg.norm(row_direction)
@@ -308,7 +336,7 @@ def row_traits(row_id, row_pc, plot_projected_area, n_rows):
 
     try:
         hull, _ = fill_lower_surface(row_pc).compute_convex_hull()
-        hull_volume = compute_mesh_volume(hull)
+        hull_volume = float(compute_mesh_volume(hull))
     except (RuntimeError, QhullError) as err:
         print(f"Row {row_id}: convex hull volume failed ({err}).")
         hull_volume = None
@@ -327,7 +355,7 @@ def row_traits(row_id, row_pc, plot_projected_area, n_rows):
         "plant_height": float(np.ptp(pts[:, 2])),
         "convex_hull_volume": hull_volume,
         "minimal_cube_volume": cube_volume,
-        "volume_ratio": hull_volume / cube_volume if hull_volume and cube_volume > 0 else None,
+        "volume_ratio": float(hull_volume / cube_volume) if hull_volume and cube_volume > 0 else None,
         "row_projected_area": row_area,
         "canopy_area_ratio": row_area * n_rows / plot_projected_area if plot_projected_area > 0 else None,
         "obb_extent_x": float(dims[0]),
@@ -355,7 +383,8 @@ def process_point_cloud(file_path, planting_direction=None, n_rows=3,
     file_path : str or Path
         Input point cloud.
     planting_direction : sequence of two floats, optional
-        Row direction in the XY plane, e.g. ``[1, 2.3]``. Estimated by PCA if omitted.
+        Row direction in the XY plane, e.g. ``[1, 2.3]``. Estimated from the
+        point distribution if omitted (see :func:`estimate_row_direction`).
     n_rows : int
         Number of rows in the plot.
     cloth_resolution : float

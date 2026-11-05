@@ -56,3 +56,20 @@ def test_batch_folder(tmp_path):
     for r in rows:
         assert 0.4 < float(r["plant_height"]) < 0.6
         assert 1.8 < float(r["row_projected_area"]) < 3.2
+
+
+def test_row_direction_on_square_plot():
+    """Three short, wide rows at 70 deg in a square plot: PCA picks the wrong axis."""
+    rng = np.random.default_rng(1)
+    t = np.deg2rad(70)
+    along, across = np.array([np.cos(t), np.sin(t)]), np.array([-np.sin(t), np.cos(t)])
+    pts = []
+    for k in (-1, 0, 1):
+        s = rng.uniform(-1.2, 1.2, 20000)
+        w = k * 0.9 + rng.normal(0, 0.12, 20000)
+        pts.append(np.outer(s, along) + np.outer(w, across))
+    xy = np.vstack(pts)
+    est = P.estimate_row_direction(xy)
+    assert abs(abs(est @ along) - 1) < 1 - np.cos(np.deg2rad(1.0))
+    _, _, vt = np.linalg.svd(xy - xy.mean(0), full_matrices=False)
+    assert abs(vt[0] @ along) < 0.9  # PCA alone would be off here

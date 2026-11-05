@@ -32,7 +32,7 @@ python process_point_cloud.py site_02.ply site_09.ply --show
 | Option | Default | Notes |
 |---|---|---|
 | `--rows` | 3 | rows per plot |
-| `--direction DX DY` | PCA | planting direction in the XY plane |
+| `--direction DX DY` | estimated | planting direction in the XY plane; estimated from the row/gap pattern if omitted |
 | `--cloth-resolution` | 0.1 | CSF grid size in cloud units. Increase on rough or sloping ground |
 | `--show` | off | open viewers for each step |
 | `--manual` | off | enable the manual point-removal window |
@@ -70,6 +70,7 @@ Sparser clouds need larger `eps` values. These are function arguments in `proces
 - Batch input, CSV output and a command line replace the hard-coded file path.
 - The README described the run as fully automatic while the code still opened a manual window. Manual clean-up is now opt-in.
 - Added the missing `requirements.txt`.
+- The planting direction is estimated from the row/gap pattern instead of PCA, which cut across rows on near-square plots.
 
 ## Citation
 

@@ -32,7 +32,7 @@ python process_point_cloud.py site_02.ply site_09.ply --show
 | 参数 | 默认值 | 说明 |
 |---|---|---|
 | `--rows` | 3 | 每个小区的行数 |
-| `--direction DX DY` | PCA 估计 | XY 平面内的播种方向 |
+| `--direction DX DY` | 自动估计 | XY 平面内的播种方向；不指定时根据行和行间空隙的分布自动估计 |
 | `--cloth-resolution` | 0.1 | CSF 网格大小（点云单位），地面起伏大或有坡度时调大 |
 | `--show` | 关 | 每一步弹出可视化窗口 |
 | `--manual` | 关 | 启用手动删点窗口 |
@@ -70,6 +70,7 @@ python process_point_cloud.py site_02.ply site_09.ply --show
 - 用批量输入、CSV 输出和命令行参数替代原来写死的文件路径。
 - 原 README 说流程全自动，代码里却还会弹出手动删点窗口。现在手动清理改为可选，默认关闭。
 - 补上之前缺失的 `requirements.txt`。
+- 播种方向改为根据行和行间空隙的分布来估计，不再用 PCA。PCA 在接近正方形的小区上会斜着切过行。
 
 ## 引用
 
