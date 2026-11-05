@@ -2,6 +2,7 @@
 
 English | [中文](README.zh-CN.md)
 
+[![CI](https://github.com/smiler488/PointCloudProcessing-CSF/actions/workflows/test.yml/badge.svg)](https://github.com/smiler488/PointCloudProcessing-CSF/actions/workflows/test.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) ![Python 3.9–3.12](https://img.shields.io/badge/Python_3.9%E2%80%933.12-informational)
 Batch extraction of row-level canopy traits from UAV point clouds of row-crop plots. Ground points are removed with the Cloth Simulation Filter (CSF), the plot is levelled, the canopy is cleaned and split into rows, and height, volume and area traits are written to one CSV for all plots.
 
 This is the hands-off sibling of [CanopyPC](https://github.com/smiler488/CanopyPC). Both share the same processing code. CanopyPC is for working through one plot with viewers and manual clean-up. This repository is for running a whole trial overnight without anything waiting for a click.

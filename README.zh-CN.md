@@ -2,6 +2,7 @@
 
 [English](README.md) | 中文
 
+[![CI](https://github.com/smiler488/PointCloudProcessing-CSF/actions/workflows/test.yml/badge.svg)](https://github.com/smiler488/PointCloudProcessing-CSF/actions/workflows/test.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) ![Python 3.9–3.12](https://img.shields.io/badge/Python_3.9%E2%80%933.12-informational)
 从行播作物小区的无人机点云里批量提取按行统计的冠层性状。处理流程依次是：用布料模拟滤波（CSF）去地面、调平、去噪、分行，最后把所有小区的株高、体积、面积性状汇总到同一个 CSV。
 
 它和 [CanopyPC](https://github.com/smiler488/CanopyPC) 是一对，处理代码相同。CanopyPC 适合单个小区边看边调、手动清理；这个仓库适合整个试验的数据丢进去跑一晚上，中间不需要人点任何东西。
